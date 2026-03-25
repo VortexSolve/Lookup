@@ -31,6 +31,21 @@ import html as html_module
 def _tag(pattern, replacement):
     return (re.compile(pattern, re.IGNORECASE | re.DOTALL), replacement)
 
+def _tag_ol(match):
+    items = re.findall(r"<li[^>]*>(.*?)</li>", match.group(1), re.IGNORECASE | re.DOTALL)
+    return "\n".join(f"{i+1}. {item.strip()}" for i, item in enumerate(items)) + "\n"
+
+def _convert_table(inner_html):
+    rows = re.findall(r"<tr[^>]*>(.*?)</tr>", inner_html, re.IGNORECASE | re.DOTALL)
+    md_rows = []
+    for idx, row in enumerate(rows):
+        cells = re.findall(r"<t[dh][^>]*>(.*?)</t[dh]>", row, re.IGNORECASE | re.DOTALL)
+        cells = [re.sub(r"<[^>]+>", "", c).strip() for c in cells]
+        md_rows.append("| " + " | ".join(cells) + " |")
+        if idx == 0:
+            md_rows.append("| " + " | ".join(["---"] * len(cells)) + " |")
+    return "\n".join(md_rows) + "\n"
+
 HTML_RULES = [
     # Headings
     _tag(r"<h1[^>]*>(.*?)</h1>", r"# \1\n"),
@@ -64,21 +79,6 @@ HTML_RULES = [
     # Strip remaining tags
     _tag(r"<[^>]+>",                     r""),
 ]
-
-def _tag_ol(match):
-    items = re.findall(r"<li[^>]*>(.*?)</li>", match.group(1), re.IGNORECASE | re.DOTALL)
-    return "\n".join(f"{i+1}. {item.strip()}" for i, item in enumerate(items)) + "\n"
-
-def _convert_table(inner_html):
-    rows = re.findall(r"<tr[^>]*>(.*?)</tr>", inner_html, re.IGNORECASE | re.DOTALL)
-    md_rows = []
-    for idx, row in enumerate(rows):
-        cells = re.findall(r"<t[dh][^>]*>(.*?)</t[dh]>", row, re.IGNORECASE | re.DOTALL)
-        cells = [re.sub(r"<[^>]+>", "", c).strip() for c in cells]
-        md_rows.append("| " + " | ".join(cells) + " |")
-        if idx == 0:
-            md_rows.append("| " + " | ".join(["---"] * len(cells)) + " |")
-    return "\n".join(md_rows) + "\n"
 
 def html_to_markdown(html: str) -> str:
     text = html
