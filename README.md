@@ -5,9 +5,9 @@
 ---
 
 <p align="center">
-  <a href="https://github.com/YOUR_USERNAME/Vortex-Lookup/releases/latest"><img src="https://img.shields.io/github/v/release/YOUR_USERNAME/Vortex-Lookup?label=version&style=for-the-badge&color=7c6aff"></a>
-  <a href="https://github.com/YOUR_USERNAME/Vortex-Lookup/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-GPL--3.0-34d399?style=for-the-badge"></a>
-  <a href="https://github.com/YOUR_USERNAME/Vortex-Lookup/stargazers"><img src="https://img.shields.io/github/stars/YOUR_USERNAME/Vortex-Lookup?style=for-the-badge&color=fb923c"></a>
+  <a href="https://github.com/VortexSolve/Lookup/releases/latest"><img src="https://img.shields.io/github/v/release/YOUR_USERNAME/Vortex-Lookup?label=version&style=for-the-badge&color=7c6aff"></a>
+  <a href="https://github.com/VortexSolve/Lookup/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-GPL--3.0-34d399?style=for-the-badge"></a>
+  <a href="https://github.com/VortexSolve/Lookup/stargazers"><img src="https://img.shields.io/github/stars/YOUR_USERNAME/Vortex-Lookup?style=for-the-badge&color=fb923c"></a>
 </p>
 
 ---
