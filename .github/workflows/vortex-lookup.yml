@@ -47,17 +47,23 @@ jobs:
             let question = questionMatch ? questionMatch[1].trim() : '';
             if (question === '_No response_') question = '';
 
-            // Extract image URL
-            const imageBlockMatch = body.match(/### Image URL or Attachment\s*\n+([\s\S]*?)(?=\n###|\n---|\n_No response_|$)/);
+            // Extract image URL block — stop at next ### or end of string
+            const imageBlockMatch = body.match(/### Image URL or Attachment\s*\n([\s\S]*?)(?=\n###|$)/);
             let imageRaw = imageBlockMatch ? imageBlockMatch[1].trim() : '';
             if (imageRaw === '_No response_') imageRaw = '';
 
-            // Parse GitHub image embed: ![image](URL) or plain URL
+            // Parse image URL from multiple formats:
+            // 1. HTML img tag:  <img ... src="https://..." />
+            // 2. Markdown embed: ![image](https://...)
+            // 3. Plain URL
             let imageUrl = '';
-            const embedMatch = imageRaw.match(/!\[.*?\]\((https?:\/\/[^\)]+)\)/);
-            if (embedMatch) {
-              imageUrl = embedMatch[1];
-            } else if (imageRaw.startsWith('http')) {
+            const htmlImgMatch = imageRaw.match(/<img[^>]+src=["']([^"']+)["']/i);
+            const mdEmbedMatch = imageRaw.match(/!\[.*?\]\((https?:\/\/[^\)]+)\)/);
+            if (htmlImgMatch) {
+              imageUrl = htmlImgMatch[1];
+            } else if (mdEmbedMatch) {
+              imageUrl = mdEmbedMatch[1];
+            } else if (imageRaw.match(/^https?:\/\//)) {
               imageUrl = imageRaw.split('\n')[0].trim();
             }
 
