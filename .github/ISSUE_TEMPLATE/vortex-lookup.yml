@@ -1,0 +1,45 @@
+name: "🔍 Vortex Lookup"
+description: "Submit a text question or image to be searched on Gauth automatically."
+title: "[Lookup] "
+labels:
+  - searchthis
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## 🌀 Vortex Lookup
+        Submit your question below. Once this issue is tagged **`searchthis`**, the bot will automatically search Gauth and reply with the answer.
+
+  - type: dropdown
+    id: query_type
+    attributes:
+      label: Query Type
+      description: Are you submitting a text question or an image?
+      options:
+        - Text Question
+        - Image Upload
+    validations:
+      required: true
+
+  - type: textarea
+    id: question
+    attributes:
+      label: "Text Question"
+      description: "Type your question here (leave blank if uploading an image)."
+      placeholder: "e.g. What is the quadratic formula?"
+
+  - type: textarea
+    id: image_url
+    attributes:
+      label: "Image URL or Attachment"
+      description: |
+        If submitting an image, paste a **direct image URL** here, or drag & drop an image into this box (GitHub will generate a URL like `![image](https://...)`).
+      placeholder: "https://example.com/image.png  OR  paste a GitHub image embed"
+
+  - type: checkboxes
+    id: confirm
+    attributes:
+      label: Confirmation
+      options:
+        - label: I confirm this issue should be processed by Vortex Lookup.
+          required: true
