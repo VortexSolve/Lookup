@@ -2,7 +2,7 @@ name: 🌀 Vortex Lookup
 
 on:
   issues:
-    types: [opened, labeled]
+    types: [opened, labeled, reopened]
 
 permissions:
   issues: write
@@ -89,7 +89,8 @@ jobs:
         run: |
           python .github/scripts/vortex_lookup.py
 
-      - name: Post answer as comment
+      - name: Post answer and close as completed
+        if: success()
         uses: actions/github-script@v7
         with:
           script: |
@@ -114,14 +115,30 @@ jobs:
               body: body
             });
 
-      - name: Close issue after answering
-        uses: actions/github-script@v7
-        with:
-          script: |
             await github.rest.issues.update({
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: context.issue.number,
               state: 'closed',
               state_reason: 'completed'
+            });
+
+      - name: Post failure comment and close as not planned
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: `## 🌀 Vortex Lookup — Failed\n\n❌ The lookup failed during the run. This could be due to:\n- Gauth being unavailable or changing its page structure\n- A timeout waiting for the answer to load\n- An invalid or inaccessible image URL\n\n**Re-open this issue to try again.**\n\n---\n*[View workflow logs](../../actions) for more details.*`
+            });
+
+            await github.rest.issues.update({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              state: 'closed',
+              state_reason: 'not_planned'
             });
