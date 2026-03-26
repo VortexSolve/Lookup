@@ -102,8 +102,8 @@ def duckduckgo(results, query):
         )
         soup = BeautifulSoup(r.text, "html.parser")
 
-        for r in soup.select(".result"):
-            t = clean(r.get_text(" "))
+        for res in soup.select(".result"):
+            t = clean(res.get_text(" "))
             if is_good(t):
                 results.append(("duck", t))
     except:
@@ -251,3 +251,10 @@ AI chars: {len(ai)}
 
 </details>
 """
+
+    # 💾 Write output
+    Path("/tmp/vortex_answer.md").write_text(final.strip(), encoding="utf-8")
+
+
+if __name__ == "__main__":
+    main()
