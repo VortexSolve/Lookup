@@ -8,8 +8,7 @@ from pathlib import Path
 from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeoutError
 
 # 🔥 NEW: stealth
-from playwright_stealth import stealth
-
+from playwright_stealth import stealth_sync
 GAUTH_URL = "https://www.gauthmath.com/"
 
 TEXT_INPUT_SELECTOR = 'input[type="search"]'
@@ -199,7 +198,7 @@ def main():
         page = context.new_page()
 
         # 🔥 stealth applied HERE
-        stealth(page)
+        stealth_sync(page)
 
         try:
             if image_path:
