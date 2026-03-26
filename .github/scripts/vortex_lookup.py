@@ -1,115 +1,126 @@
 #!/usr/bin/env python3
-import os, threading, requests, re
-from bs4 import BeautifulSoup
+import os, requests, threading, time, re
 from pathlib import Path
+from bs4 import BeautifulSoup
 
 QUESTION = os.environ.get("QUESTION", "").strip()
 IMAGE_URL = os.environ.get("IMAGE_URL", "").strip()
 
 # --------------------------------------------------
-# 🔍 DOMAIN FILTER (VERY IMPORTANT)
+# ⚙️ CONFIG
 # --------------------------------------------------
 
-BAD_SITES = [
-    "godlikeproductions",
-    "pinterest",
-    "facebook",
-    "tiktok",
-    "quora"
+TIMEOUT = 8
+
+BAD_KEYWORDS = [
+    "buy", "order", "delivery", "near me",
+    "yelp", "tripadvisor", "pinterest",
+    "tiktok", "facebook", "reddit",
+    "shop", "florist"
 ]
 
-GOOD_HINTS = [
-    "math", "stackexchange", "wikipedia",
-    "bbc", "khanacademy", "symbolab",
-    "wolfram", "mathway"
+GOOD_SOURCES = [
+    "wikipedia", "khan", "bbc",
+    "stackexchange", "math", "symbolab",
+    "wolfram", "education"
 ]
 
-def is_good_result(text):
-    text = text.lower()
-    if any(bad in text for bad in BAD_SITES):
+# --------------------------------------------------
+# 🧠 HELPERS
+# --------------------------------------------------
+
+def clean(text):
+    return re.sub(r"\s+", " ", text).strip()
+
+def is_good(text):
+    t = text.lower()
+    if any(b in t for b in BAD_KEYWORDS):
         return False
-    return True
+    return len(t) > 30
+
+def score(text):
+    t = text.lower()
+    s = 0
+    for g in GOOD_SOURCES:
+        if g in t:
+            s += 3
+    if any(x in t for x in ["what", "why", "how", "solve"]):
+        s += 2
+    return s
 
 # --------------------------------------------------
-# 🔍 GOOGLE LENS (IMPROVED)
+# 🔍 GOOGLE LENS
 # --------------------------------------------------
 
-def google_lens():
+def google_lens(results):
     if not IMAGE_URL:
-        return ""
-
+        return
     try:
         r = requests.get(
             f"https://lens.google.com/uploadbyurl?url={IMAGE_URL}",
             headers={"User-Agent": "Mozilla/5.0"},
-            timeout=10
+            timeout=TIMEOUT
         )
-
         soup = BeautifulSoup(r.text, "html.parser")
 
-        results = []
         for a in soup.select("a"):
-            text = a.get_text(strip=True)
-            if text and len(text) > 25:
-                if is_good_result(text):
-                    results.append(text)
-            if len(results) >= 3:
-                break
-
-        return "\n\n".join(results)
+            t = clean(a.get_text())
+            if is_good(t):
+                results.append(("lens", t))
+                if len(results) >= 3:
+                    return
     except:
-        return ""
+        pass
 
 # --------------------------------------------------
-# 🌐 SEARCH (FILTERED + RANKED)
+# 🌐 SEARCH ENGINES
 # --------------------------------------------------
 
-def search_engine(query, results):
+def bing(results, query):
     try:
         r = requests.get(
             f"https://www.bing.com/search?q={query}",
             headers={"User-Agent": "Mozilla/5.0"},
-            timeout=8
+            timeout=TIMEOUT
         )
         soup = BeautifulSoup(r.text, "html.parser")
 
         for li in soup.select("li.b_algo"):
-            text = li.get_text(" ", strip=True)
-
-            if not is_good_result(text):
-                continue
-
-            score = sum(1 for g in GOOD_HINTS if g in text.lower())
-
-            results.append((score, text))
-
+            t = clean(li.get_text(" "))
+            if is_good(t):
+                results.append(("bing", t))
     except:
         pass
 
 
-def run_search(query):
-    results = []
-    t = threading.Thread(target=search_engine, args=(query, results))
-    t.start()
-    t.join()
+def duckduckgo(results, query):
+    try:
+        r = requests.get(
+            f"https://duckduckgo.com/html/?q={query}",
+            headers={"User-Agent": "Mozilla/5.0"},
+            timeout=TIMEOUT
+        )
+        soup = BeautifulSoup(r.text, "html.parser")
 
-    # sort by score
-    results.sort(key=lambda x: x[0], reverse=True)
-
-    return "\n\n".join([r[1] for r in results[:3]])
+        for r in soup.select(".result"):
+            t = clean(r.get_text(" "))
+            if is_good(t):
+                results.append(("duck", t))
+    except:
+        pass
 
 # --------------------------------------------------
-# 🤖 POLLINATIONS AI (FIXED)
+# 🤖 AI
 # --------------------------------------------------
 
-def vortex_ai(prompt):
+def ask_ai(prompt):
     try:
         r = requests.post(
             "https://text.pollinations.ai/",
             json={
                 "model": "openai",
                 "messages": [
-                    {"role": "system", "content": "You are a helpful tutor. Solve clearly and correctly."},
+                    {"role": "system", "content": "Answer clearly and accurately."},
                     {"role": "user", "content": prompt}
                 ]
             },
@@ -120,8 +131,7 @@ def vortex_ai(prompt):
             return ""
 
         try:
-            data = r.json()
-            return data.get("text", "")
+            return r.json().get("text", "")
         except:
             return r.text
 
@@ -129,67 +139,105 @@ def vortex_ai(prompt):
         return f"AI error: {e}"
 
 # --------------------------------------------------
-# 🧠 SIMPLE OCR (IMAGE → TEXT via Lens fallback)
+# 🧠 ANSWER PROCESSING
 # --------------------------------------------------
 
-def extract_question():
-    if QUESTION:
-        return QUESTION
+def short_answer(text):
+    if not text:
+        return "_No answer_"
+    for line in text.split("\n"):
+        line = line.strip()
+        if len(line) > 25:
+            return line
+    return text[:200]
 
-    if IMAGE_URL:
-        return f"Solve this math problem from an image: {IMAGE_URL}"
-
-    return ""
+def confidence(answer, sources):
+    if not answer:
+        return "Low"
+    if len(sources) > 5:
+        return "High"
+    if len(sources) > 2:
+        return "Medium"
+    return "Low"
 
 # --------------------------------------------------
 # 🚀 MAIN
 # --------------------------------------------------
 
 def main():
-    print("[Vortex] Running improved engine")
+    query = QUESTION or f"solve this: {IMAGE_URL}"
 
-    query = extract_question()
+    results = []
 
-    # 🔍 Step 1: Lens
-    lens = google_lens()
+    threads = [
+        threading.Thread(target=google_lens, args=(results,)),
+        threading.Thread(target=bing, args=(results, query)),
+        threading.Thread(target=duckduckgo, args=(results, query))
+    ]
 
-    # 🌐 Step 2: Search
-    search = run_search(query)
+    # ⚡ run in parallel
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join()
+
+    # 🧠 sort results
+    results.sort(key=lambda x: score(x[1]), reverse=True)
+
+    lens = "\n\n".join([r[1] for r in results if r[0] == "lens"][:3])
+    search = "\n\n".join([r[1] for r in results if r[0] != "lens"][:5])
 
     combined = f"""
-## 🔍 Google Lens
+Google Lens:
 {lens}
 
-## 🌐 Search
+Search:
 {search}
 """
 
-    # 🧠 Step 3: AI
-    ai_prompt = f"""
-Solve this problem clearly and correctly.
+    # 🤖 AI solve
+    ai = ask_ai(f"""
+Answer this clearly:
 
-Question:
 {query}
 
 Context:
 {combined}
-"""
+""")
 
-    answer = vortex_ai(ai_prompt)
+    if not ai:
+        ai = "⚠️ AI failed to generate a response."
 
-    if not answer:
-        answer = "⚠️ AI could not generate a response."
+    conf = confidence(ai, results)
 
+    # 🎨 FINAL OUTPUT
     final = f"""
-{combined}
+# 🌀 Vortex Result
 
-## 🧠 Final Answer
-{answer}
-"""
+> 🧠 **Answer:**  
+> {short_answer(ai)}
 
-    Path("/tmp/vortex_answer.md").write_text(final)
-    print("[Vortex] Done")
+> 📊 **Confidence:** {conf}
 
+---
 
-if __name__ == "__main__":
-    main()
+<details>
+<summary>📖 Full Explanation</summary>
+
+{ai}
+</details>
+
+<details>
+<summary>🔍 Google Lens</summary>
+
+{lens or "_None_"}
+</details>
+
+<details>
+<summary>🌐 Search Results</summary>
+
+{search or "_None_"}
+</details>
+
+<details>
+<summary>🐛 Debug</summary>
