@@ -2,7 +2,8 @@ name: 🌀 Vortex Lookup
 
 on:
   issues:
-    types: [labeled]
+    types: [labeled, reopened]
+
 
 permissions:
   issues: write
@@ -10,11 +11,14 @@ permissions:
 
 jobs:
   vortex-lookup:
-    name: Run Vortex Lookup
     runs-on: ubuntu-latest
 
-    # ✅ Only trigger when YOUR label is added (prevents double runs)
-    if: github.event.label.name == 'searchthis'
+    if: |
+      github.event.label.name == 'searchthis' ||
+      (
+        github.event.action == 'reopened' &&
+        contains(github.event.issue.labels.*.name, 'searchthis')
+      )
 
     steps:
       # --------------------------------------------------
