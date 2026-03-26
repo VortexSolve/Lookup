@@ -241,3 +241,13 @@ Context:
 
 <details>
 <summary>🐛 Debug</summary>
+
+Query: {query}  
+Image: {IMAGE_URL or "None"}  
+Results: {len(results)}  
+Lens chars: {len(lens)}  
+Search chars: {len(search)}  
+AI chars: {len(ai)}
+
+</details>
+"""
